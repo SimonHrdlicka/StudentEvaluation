@@ -11,7 +11,6 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
 import re
 import html
-import requests
 from datetime import datetime, time
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
