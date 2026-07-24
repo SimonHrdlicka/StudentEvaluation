@@ -39,27 +39,21 @@ def calculate_total_height(formatted_text, font_size, width):
     _, h = p.wrap(width, 10000 * cm)
     return h
 
-def create_constrained_pdf(comments_dictionary, output_pdf_path, max_height_cm):
+def create_constrained_pdf(comments_dictionary, output_pdf_path, max_height_cm, selected_students):
     rect_width = 10.4 * cm
     max_height_pts = max_height_cm * cm
     side_margin = 5.3 * cm
     top_margin = 2.5 * cm
      
-    print("You have " + str (len(comments_dictionary)) + " comments from the day.")
-    if len(comments_dictionary) == 0:
+    # If no students were selected in the Streamlit UI, do nothing
+    if not selected_students:
         return
-    for i in range(len(comments_dictionary.keys())):
-        print(str(i+1) + ": " + list(comments_dictionary.keys())[i])
-    selected_students = input("Enter the numbers of the students you want to include, separated by commas (e.g., 1,3,4): ").split(',')
-    
-    student_names = list(comments_dictionary.keys())
+
     story = []
     styles = getSampleStyleSheet()
 
-    # 1. Loop through selected students and create an individual rectangle for each
-    for idx_str in selected_students:
-        idx = int(idx_str.strip())-1
-        student_name = student_names[idx]
+    # 1. Loop directly through the names passed by Streamlit's multiselect
+    for idx, student_name in enumerate(selected_students):
         clean_html = comments_dictionary[student_name]
         
         # 2. Calculate the optimal font size for THIS specific box
@@ -79,10 +73,8 @@ def create_constrained_pdf(comments_dictionary, output_pdf_path, max_height_cm):
                 break
             current_font_size -= step
 
-        if current_font_size <= min_font_size:
-            print("⚠️ WARNING: Text is too large for this rectangle height even at the minimum font size!")
-
         # Define the typography style for this individual block
+        # We use 'idx' to ensure every style has a unique name in the document
         final_style = ParagraphStyle(
             f'FinalStyle_{idx}',
             parent=styles['Normal'],
@@ -113,10 +105,10 @@ def create_constrained_pdf(comments_dictionary, output_pdf_path, max_height_cm):
         # Add the completed rectangle to the document sequence
         story.append(t)
         
-        # Add a 0.5 cm empty spacer to separate this rectangle from the next one
-        #story.append(Spacer(1, 0.5 * cm))
+        # (Optional) Add a spacer if you want a gap between rectangles
+        # story.append(Spacer(1, 0.5 * cm))
 
-    # 4. Build Document
+    # 4. Build Document using the virtual buffer
     doc = SimpleDocTemplate(
         output_pdf_path,
         pagesize=A4,
@@ -127,8 +119,6 @@ def create_constrained_pdf(comments_dictionary, output_pdf_path, max_height_cm):
     )
 
     doc.build(story)
-    print(f"Success! PDF generated at: {output_pdf_path}")
-
 
 def get_todays_training_comments(api_token):
     # The single GraphQL endpoint
