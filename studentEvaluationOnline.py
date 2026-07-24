@@ -16,8 +16,8 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, 
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-pdfmetrics.registerFont(TTFont('Arial', 'arial.ttf'))
-pdfmetrics.registerFont(TTFont('Arial-Bold', 'arialbd.ttf'))
+pdfmetrics.registerFont(TTFont('Arial', 'ARIAL.TTF'))
+pdfmetrics.registerFont(TTFont('Arial-Bold', 'ARIALBD.TTF'))
 pdfmetrics.registerFontFamily(
     'Arial',
     normal='Arial',
