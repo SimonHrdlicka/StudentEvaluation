@@ -107,12 +107,17 @@ def get_todays_training_comments(api_token):
         "Content-Type": "application/json"
     }
 
-    start_of_today = datetime.combine(datetime.today() - timedelta(days=1), time(0, 0, 0)).isoformat() + "Z"
-    end_of_today = datetime.combine(datetime.today(), time(23, 59, 59)).isoformat() + "Z"
+    # Safely calculate a 48-hour window covering yesterday and today
+    today = datetime.utcnow().date()
+    yesterday = today - timedelta(days=1)
+    
+    start_of_period = datetime.combine(yesterday, time.min).isoformat() + "Z"
+    end_of_period = datetime.combine(today, time.max).isoformat() + "Z"
 
+    # Increased 'first: 50' to 'first: 250' to prevent busy schools from pushing your flights out
     query = """
     query GetTodayTrainings($fromDate: DateTime, $toDate: DateTime) {
-      trainings(first: 50, from: $fromDate, to: $toDate) {
+      trainings(first: 250, from: $fromDate, to: $toDate) {
         edges {
           node {
             id
@@ -141,22 +146,30 @@ def get_todays_training_comments(api_token):
     """
     
     variables = {
-        "fromDate": start_of_today,
-        "toDate": end_of_today
+        "fromDate": start_of_period,
+        "toDate": end_of_period
     }
 
     response = requests.post(url, json={'query': query, 'variables': variables}, headers=headers)
 
     if response.status_code == 200:
         data = response.json()
+        
+        # Catch hidden GraphQL errors that return a 200 status but no data
+        if 'errors' in data:
+            st.error(f"GraphQL API Error: {data['errors'][0].get('message', 'Unknown error')}")
+            return {}
+            
         trainings_connection = data.get('data', {}).get('trainings', {})
         edges = trainings_connection.get('edges', [])
         
         if not edges:
+            st.warning("The API returned exactly 0 completed trainings for yesterday and today.")
             return {}
         
         names = []
         student_data = {}
+        
         for edge in edges:
             node = edge.get('node', {})
             student_node = node.get('student') or {}
@@ -182,7 +195,8 @@ def get_todays_training_comments(api_token):
                 elif "Exercise:" in comment:
                     comment = re.sub(r'Exercise:.+?<br/>', '', comment, flags=re.IGNORECASE)
 
-                if comment in ["<p>", "<br/>", "</p>"]:
+                # Strip out entirely empty tags
+                if comment.strip() in ["<p>", "<br/>", "</p>", ""]:
                     comment = ""
             else:
                 comment = ""
@@ -212,6 +226,7 @@ def get_todays_training_comments(api_token):
                 total_flight_time += f_log.get('airTimeSeconds') or 0
                 total_block_time += f_log.get('blockTimeSeconds') or 0
             
+            # Only save the flight if there is an actual debriefing comment
             if comment != "":
                 student_data[name] = {
                     "comment": comment,
@@ -222,8 +237,11 @@ def get_todays_training_comments(api_token):
                     "blockTime": total_block_time,
                     "landings": total_landings
                 }
-                
+        
+        # Output a diagnostic message to the user interface
+        st.success(f"Diagnostic: The API found {len(edges)} total flights. {len(student_data)} of them contained debriefing comments.")
         return student_data
+
     else:
         st.error(f"Failed to connect to FlightLogger API (Status Code: {response.status_code}).")
         return {}
