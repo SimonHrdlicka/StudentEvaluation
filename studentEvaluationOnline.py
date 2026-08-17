@@ -39,7 +39,7 @@ def get_todays_training_comments(api_token):
     # FIX 2 & 3 & 4: aircraftClass is an enum, landings is a list, and flightLog is now primaryLog
     query = """
     query GetTodayTrainings($fromDate: DateTime, $toDate: DateTime) {
-      trainings(first: 250, from: $fromDate, to: $toDate) {
+      trainings(first: 150, from: $fromDate, to: $toDate) {
         edges {
           node {
             id
