@@ -1,7 +1,7 @@
 import io
 import re
 import requests
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 
 import streamlit as st
 from reportlab.lib import colors
@@ -107,7 +107,7 @@ def get_todays_training_comments(api_token):
         "Content-Type": "application/json"
     }
 
-    start_of_today = datetime.combine(datetime.today() - datetime.timedelta(days=1), time(0, 0, 0)).isoformat() + "Z"
+    start_of_today = datetime.combine(datetime.today() - timedelta(days=1), time(0, 0, 0)).isoformat() + "Z"
     end_of_today = datetime.combine(datetime.today(), time(23, 59, 59)).isoformat() + "Z"
 
     query = """
