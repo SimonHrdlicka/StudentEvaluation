@@ -1,7 +1,7 @@
 import io
 import re
 import requests
-from datetime import datetime, time, timedelta
+from datetime import datetime, time, timedelta, timezone
 
 import streamlit as st
 from reportlab.lib import colors
@@ -21,84 +21,6 @@ pdfmetrics.registerFontFamily(
     bold='Arial-Bold'
 )
 
-def calculate_total_height(formatted_text, font_size, width):
-    """Accurately calculates the exact height of the text block at a given font size."""
-    styles = getSampleStyleSheet()
-    test_style = ParagraphStyle(
-        'TestStyle',
-        parent=styles['Normal'],
-        fontName='Arial',
-        fontSize=font_size,
-        leading=font_size * 1.35,
-        alignment=0
-    )
-    p = Paragraph(formatted_text, test_style)
-    _, h = p.wrap(width, 10000 * cm)
-    return h
-
-def create_constrained_pdf(comments_dictionary, output_target, max_height_cm, selected_students):
-    rect_width = 10.4 * cm
-    max_height_pts = max_height_cm * cm
-    side_margin = 5.3 * cm
-    top_margin = -6  # Negative margin cancels ReportLab's 6pt internal frame padding
-     
-    if not selected_students:
-        return
-
-    story = []
-    styles = getSampleStyleSheet()
-
-    # Loop directly through selected student names
-    for idx, student_name in enumerate(selected_students):
-        clean_html = comments_dictionary[student_name]["comment"]
-        
-        current_font_size = 10.0  
-        min_font_size = 3.0       
-        step = 0.1                
-
-        internal_text_width = rect_width - 6
-        
-        while current_font_size > min_font_size:
-            total_text_height = calculate_total_height(clean_html, current_font_size, internal_text_width) + 6
-            if total_text_height <= max_height_pts:
-                break
-            current_font_size -= step
-
-        final_style = ParagraphStyle(
-            f'FinalStyle_{idx}',
-            parent=styles['Normal'],
-            fontName='Arial',
-            fontSize=current_font_size,
-            leading=current_font_size * 1.35,
-            textColor=colors.blue,
-            alignment=0
-        )
-        
-        p = Paragraph(clean_html, final_style)
-        
-        t = Table([[p]], colWidths=[rect_width], hAlign='CENTER')
-        t.setStyle(TableStyle([
-            ('BOX', (0,0), (-1,-1), 1, colors.Color(0.75, 0.75, 0.75)), 
-            ('VALIGN', (0,0), (-1,-1), 'TOP'),
-            ('LEFTPADDING', (0,0), (-1,-1), 3),
-            ('RIGHTPADDING', (0,0), (-1,-1), 3),
-            ('TOPPADDING', (0,0), (-1,-1), 3),
-            ('BOTTOMPADDING', (0,0), (-1,-1), 3),
-        ]))
-        
-        story.append(t)
-
-    doc = SimpleDocTemplate(
-        output_target,
-        pagesize=A4,
-        leftMargin=side_margin,
-        rightMargin=side_margin,
-        topMargin=top_margin,
-        bottomMargin=0.5 * cm
-    )
-
-    doc.build(story)
-
 def get_todays_training_comments(api_token):
     url = "https://api.flightlogger.net/graphql"
 
@@ -107,14 +29,14 @@ def get_todays_training_comments(api_token):
         "Content-Type": "application/json"
     }
 
-    # Safely calculate a 48-hour window covering yesterday and today
-    today = datetime.utcnow().date()
+    # FIX 1: Safely calculate the date using the modern timezone-aware method
+    today = datetime.now(timezone.utc).date()
     yesterday = today - timedelta(days=1)
     
     start_of_period = datetime.combine(yesterday, time.min).isoformat() + "Z"
     end_of_period = datetime.combine(today, time.max).isoformat() + "Z"
 
-    # Increased 'first: 50' to 'first: 250' to prevent busy schools from pushing your flights out
+    # FIX 2: Removed '{ name }' from aircraftClass since it is an Enum
     query = """
     query GetTodayTrainings($fromDate: DateTime, $toDate: DateTime) {
       trainings(first: 250, from: $fromDate, to: $toDate) {
@@ -129,9 +51,7 @@ def get_todays_training_comments(api_token):
             flights {
               aircraft {
                 callSign
-                aircraftClass {
-                  name
-                }
+                aircraftClass
               }
               landings
               flightLog {
@@ -195,7 +115,6 @@ def get_todays_training_comments(api_token):
                 elif "Exercise:" in comment:
                     comment = re.sub(r'Exercise:.+?<br/>', '', comment, flags=re.IGNORECASE)
 
-                # Strip out entirely empty tags
                 if comment.strip() in ["<p>", "<br/>", "</p>", ""]:
                     comment = ""
             else:
@@ -217,16 +136,17 @@ def get_todays_training_comments(api_token):
                 if callsign and callsign not in regs: 
                     regs.append(callsign)
                     
-                ac_class = ac.get('aircraftClass') or {}
-                ac_type = ac_class.get('name')
-                if ac_type and ac_type not in types: 
-                    types.append(ac_type)
+                # Clean up the Enum string (e.g., "MULTI_ENGINE" becomes "Multi Engine")
+                ac_type_raw = ac.get('aircraftClass')
+                if ac_type_raw:
+                    ac_type = str(ac_type_raw).replace('_', ' ').title()
+                    if ac_type not in types: 
+                        types.append(ac_type)
                     
                 f_log = f.get('flightLog') or {}
                 total_flight_time += f_log.get('airTimeSeconds') or 0
                 total_block_time += f_log.get('blockTimeSeconds') or 0
             
-            # Only save the flight if there is an actual debriefing comment
             if comment != "":
                 student_data[name] = {
                     "comment": comment,
@@ -238,7 +158,6 @@ def get_todays_training_comments(api_token):
                     "landings": total_landings
                 }
         
-        # Output a diagnostic message to the user interface
         st.success(f"Diagnostic: The API found {len(edges)} total flights. {len(student_data)} of them contained debriefing comments.")
         return student_data
 
