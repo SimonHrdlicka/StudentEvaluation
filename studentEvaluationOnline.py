@@ -114,7 +114,6 @@ def get_todays_training_comments(api_token):
     start_of_period = datetime.combine(yesterday, time.min).isoformat() + "Z"
     end_of_period = datetime.combine(today, time.max).isoformat() + "Z"
 
-    # FIX 2 & 3 & 4: aircraftClass is an enum, landings is a list, and flightLog is now primaryLog
     query = """
     query GetTodayTrainings($fromDate: DateTime, $toDate: DateTime) {
       trainings(first: 150, from: $fromDate, to: $toDate) {
@@ -129,7 +128,7 @@ def get_todays_training_comments(api_token):
             flights {
               aircraft {
                 callSign
-                aircraftClass
+                model
               }
               landings {
                 landingTypeCount
@@ -220,7 +219,7 @@ def get_todays_training_comments(api_token):
                 if callsign and callsign not in regs: 
                     regs.append(callsign)
                     
-                ac_type_raw = ac.get('aircraftClass')
+                ac_type_raw = ac.get('model')
                 if ac_type_raw:
                     ac_type = str(ac_type_raw).replace('_', ' ').title()
                     if ac_type not in types: 
