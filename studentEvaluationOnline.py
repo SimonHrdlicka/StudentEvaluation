@@ -237,9 +237,6 @@ def get_todays_training_comments(api_token):
                     "landings": total_landings
                 }
         
-        st.success(f"Diagnostic: The API found {len(edges)} total flights. {len(student_data)} of them contained debriefing comments.")
-        return student_data
-
     else:
         st.error(f"Failed to connect to FlightLogger API (Status Code: {response.status_code}).")
         return {}
