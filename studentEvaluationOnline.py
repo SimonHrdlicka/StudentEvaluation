@@ -29,14 +29,14 @@ def get_todays_training_comments(api_token):
         "Content-Type": "application/json"
     }
 
-    # FIX 1: Safely calculate the date using the modern timezone-aware method
+    # FIX 1: Timezone-aware datetime to resolve the deprecation warning
     today = datetime.now(timezone.utc).date()
     yesterday = today - timedelta(days=1)
     
     start_of_period = datetime.combine(yesterday, time.min).isoformat() + "Z"
     end_of_period = datetime.combine(today, time.max).isoformat() + "Z"
 
-    # FIX 2: Removed '{ name }' from aircraftClass since it is an Enum
+    # FIX 2 & 3 & 4: aircraftClass is an enum, landings is a list, and flightLog is now primaryLog
     query = """
     query GetTodayTrainings($fromDate: DateTime, $toDate: DateTime) {
       trainings(first: 250, from: $fromDate, to: $toDate) {
@@ -56,7 +56,7 @@ def get_todays_training_comments(api_token):
               landings {
                 landingTypeCount
               }
-              flightLog {
+              primaryLog {
                  airTimeSeconds
                  blockTimeSeconds
               }
@@ -77,7 +77,6 @@ def get_todays_training_comments(api_token):
     if response.status_code == 200:
         data = response.json()
         
-        # Catch hidden GraphQL errors that return a 200 status but no data
         if 'errors' in data:
             st.error(f"GraphQL API Error: {data['errors'][0].get('message', 'Unknown error')}")
             return {}
@@ -131,7 +130,7 @@ def get_todays_training_comments(api_token):
             types = []
             
             for f in flights:
-                # Loop through the list of landing objects and sum up the counts
+                # Updated landings parser to loop through the landing objects
                 landings_list = f.get('landings') or []
                 for l in landings_list:
                     total_landings += l.get('landingTypeCount', 0)
@@ -141,14 +140,14 @@ def get_todays_training_comments(api_token):
                 if callsign and callsign not in regs: 
                     regs.append(callsign)
                     
-                # Clean up the Enum string (e.g., "MULTI_ENGINE" becomes "Multi Engine")
                 ac_type_raw = ac.get('aircraftClass')
                 if ac_type_raw:
                     ac_type = str(ac_type_raw).replace('_', ' ').title()
                     if ac_type not in types: 
                         types.append(ac_type)
                     
-                f_log = f.get('flightLog') or {}
+                # Updated from 'flightLog' to 'primaryLog'
+                f_log = f.get('primaryLog') or {}
                 total_flight_time += f_log.get('airTimeSeconds') or 0
                 total_block_time += f_log.get('blockTimeSeconds') or 0
             
