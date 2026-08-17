@@ -58,10 +58,9 @@ def get_todays_training_comments(api_token):
               }
               primaryLog {
                 durationSeconds
-                }
+              }
               secondaryLog {
                 durationSeconds
-                }
               }
             }
           }
