@@ -57,8 +57,11 @@ def get_todays_training_comments(api_token):
                 landingTypeCount
               }
               primaryLog {
-                 airTimeSeconds
-                 blockTimeSeconds
+                durationSeconds
+                }
+              secondaryLog {
+                durationSeconds
+                }
               }
             }
           }
@@ -146,10 +149,14 @@ def get_todays_training_comments(api_token):
                     if ac_type not in types: 
                         types.append(ac_type)
                     
-                # Updated from 'flightLog' to 'primaryLog'
-                f_log = f.get('primaryLog') or {}
-                total_flight_time += f_log.get('airTimeSeconds') or 0
-                total_block_time += f_log.get('blockTimeSeconds') or 0
+                p_log = f.get('primaryLog') or {}
+                s_log = f.get('secondaryLog') or {}
+                
+                # primaryLog is Block Time
+                total_block_time += p_log.get('durationSeconds') or 0
+                
+                # secondaryLog is Flight Time
+                total_flight_time += s_log.get('durationSeconds') or 0
             
             if comment != "":
                 student_data[name] = {
