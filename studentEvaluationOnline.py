@@ -159,10 +159,6 @@ def get_todays_training_comments(api_token):
         trainings_connection = data.get('data', {}).get('trainings', {})
         edges = trainings_connection.get('edges', [])
         
-        if not edges:
-            st.warning("The API returned exactly 0 completed trainings for yesterday and today.")
-            return {}
-        
         names = []
         student_data = {}
         
