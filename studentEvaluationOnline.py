@@ -106,13 +106,9 @@ def get_todays_training_comments(api_token):
         "Authorization": f"Bearer {api_token}",
         "Content-Type": "application/json"
     }
-
-    # FIX 1: Timezone-aware datetime to resolve the deprecation warning
-    today = datetime.now(timezone.utc).date()
-    yesterday = today - timedelta(days=1)
     
-    start_of_period = datetime.combine(yesterday, time.min).isoformat() + "Z"
-    end_of_period = datetime.combine(today, time.max).isoformat() + "Z"
+    start_of_period = datetime.combine(datetime.today(), time(00,00,00)).isoformat() + "Z"
+    end_of_period = datetime.combine(datetime.today(), time(23,59,59)).isoformat() + "Z"
 
     query = """
     query GetTodayTrainings($fromDate: DateTime, $toDate: DateTime) {
