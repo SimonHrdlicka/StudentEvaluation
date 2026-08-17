@@ -53,7 +53,9 @@ def get_todays_training_comments(api_token):
                 callSign
                 aircraftClass
               }
-              landings
+              landings {
+                landingTypeCount
+              }
               flightLog {
                  airTimeSeconds
                  blockTimeSeconds
@@ -129,7 +131,10 @@ def get_todays_training_comments(api_token):
             types = []
             
             for f in flights:
-                total_landings += f.get('landings') or 0
+                # Loop through the list of landing objects and sum up the counts
+                landings_list = f.get('landings') or []
+                for l in landings_list:
+                    total_landings += l.get('landingTypeCount', 0)
                 
                 ac = f.get('aircraft') or {}
                 callsign = ac.get('callSign')
