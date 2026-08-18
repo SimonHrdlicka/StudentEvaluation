@@ -236,7 +236,7 @@ def get_todays_training_comments(api_token):
                     "blockTime": total_block_time,
                     "landings": total_landings
                 }
-        
+        return student_data
     else:
         st.error(f"Failed to connect to FlightLogger API (Status Code: {response.status_code}).")
         return {}
