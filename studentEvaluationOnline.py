@@ -40,7 +40,7 @@ def create_constrained_pdf(comments_dictionary, output_target, max_height_cm, se
     rect_width = 10.4 * cm
     max_height_pts = max_height_cm * cm
     side_margin = 5.3 * cm
-    top_margin = -6  # Negative margin cancels ReportLab's 6pt internal frame padding
+    top_margin = 2.5 * cm
      
     if not selected_students:
         return
