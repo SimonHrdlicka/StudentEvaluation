@@ -107,7 +107,7 @@ def get_todays_training_comments(api_token):
         "Content-Type": "application/json"
     }
     
-    start_of_period = datetime.combine(datetime.today(), time(00,00,00)).isoformat() + "Z"
+    start_of_period = datetime.combine(datetime.today()-datetime.timedelta(days=1), time(00,00,00)).isoformat() + "Z"
     end_of_period = datetime.combine(datetime.today(), time(23,59,59)).isoformat() + "Z"
 
     query = """
