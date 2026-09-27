@@ -36,7 +36,6 @@ def calculate_total_height(formatted_text, font_size, width):
     _, h = p.wrap(width, 10000 * cm)
     return h
 
-
 def create_constrained_pdf(comments_dictionary, output_target, max_height_cm, selected_students):
     rect_width = 10.4 * cm
     max_height_pts = max_height_cm * cm
@@ -74,7 +73,9 @@ def create_constrained_pdf(comments_dictionary, output_target, max_height_cm, se
             textColor=colors.blue,
             alignment=0
         )
-             
+        
+        p = Paragraph(clean_html, final_style)
+        
         t = Table([[p]], colWidths=[rect_width], hAlign='CENTER')
         t.setStyle(TableStyle([
             ('BOX', (0,0), (-1,-1), 1, colors.Color(0.75, 0.75, 0.75)), 
@@ -173,19 +174,22 @@ def get_todays_training_comments(api_token):
             
             # --- 1. Comment Parsing ---
             comment = node.get('comment')
-            comment = comment.replace("<p>", "").replace("</p>", "<br>").strip()
-            if comment.endswith("<br>"):
-                comment = comment[:-4]
-            comment = "<p>" + comment.replace("<br><br><br>", "<br><br>") + "</p>"
-            comment = comment.replace('<p>', '').replace('</p>', '')
-            comment = comment.replace('<br>', '<br/>')
-            
-            if "<strong>Exercise:" in comment:
-                comment = re.sub(r'<strong>Exercise:.+?<br/>', '', comment, flags=re.IGNORECASE)
-            elif "Exercise:" in comment:
-                comment = re.sub(r'Exercise:.+?<br/>', '', comment, flags=re.IGNORECASE)
-            
-            if comment.strip() in ["<p>", "<br/>", "</p>", ""]:
+            if comment:
+                comment = comment.replace("<p>", "").replace("</p>", "<br>").strip()
+                if comment.endswith("<br>"):
+                    comment = comment[:-4]
+                comment = "<p>" + comment.replace("<br><br><br>", "<br><br>") + "</p>"
+                comment = comment.replace('<p>', '').replace('</p>', '')
+                comment = comment.replace('<br>', '<br/>')
+                
+                if "<strong>Exercise:" in comment:
+                    comment = re.sub(r'<strong>Exercise:.+?<br/>', '', comment, flags=re.IGNORECASE)
+                elif "Exercise:" in comment:
+                    comment = re.sub(r'Exercise:.+?<br/>', '', comment, flags=re.IGNORECASE)
+
+                if comment.strip() in ["<p>", "<br/>", "</p>", ""]:
+                    comment = ""
+            else:
                 comment = ""
                 
             # --- 2. Flight Data Parsing ---
