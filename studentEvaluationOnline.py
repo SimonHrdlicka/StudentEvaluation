@@ -32,7 +32,7 @@ def calculate_total_height(formatted_text, font_size, width):
         leading=font_size * 1.35,
         alignment=0
     )
-    
+    p = Paragraph(formatted_text, test_style)
     _, h = p.wrap(width, 10000 * cm)
     return h
 
