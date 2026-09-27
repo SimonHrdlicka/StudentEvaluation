@@ -33,13 +33,6 @@ def calculate_total_height(formatted_text, font_size, width):
         alignment=0
     )
     
-    # Safety net: If HTML is unbalanced, strip tags and calculate height as plain text
-    try:
-        p = Paragraph(formatted_text, test_style)
-    except ValueError:
-        safe_text = re.sub(r'<[^>]+>', '', formatted_text)
-        p = Paragraph(safe_text, test_style)
-        
     _, h = p.wrap(width, 10000 * cm)
     return h
 
@@ -81,14 +74,7 @@ def create_constrained_pdf(comments_dictionary, output_target, max_height_cm, se
             textColor=colors.blue,
             alignment=0
         )
-        
-        # Safety net: If HTML is unbalanced, strip tags and draw as safe plain text
-        try:
-            p = Paragraph(clean_html, final_style)
-        except ValueError:
-            safe_text = re.sub(r'<[^>]+>', '', clean_html)
-            p = Paragraph(safe_text, final_style)
-        
+             
         t = Table([[p]], colWidths=[rect_width], hAlign='CENTER')
         t.setStyle(TableStyle([
             ('BOX', (0,0), (-1,-1), 1, colors.Color(0.75, 0.75, 0.75)), 
