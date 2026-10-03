@@ -185,6 +185,7 @@ def get_todays_training_comments(api_token):
                 
                 if "<strong>Exercise:" in comment:
                     comment = re.sub(r'<strong>Exercise:.+?<br/>', '', comment, flags=re.IGNORECASE)
+                    comment = comment.replace("</strong>", "", 1)
                 elif "Exercise:" in comment:
                     comment = re.sub(r'Exercise:.+?<br/>', '', comment, flags=re.IGNORECASE)
 
