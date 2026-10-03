@@ -183,10 +183,8 @@ def get_todays_training_comments(api_token):
                 comment = comment.replace('<br>', '<br/>')
                 comment = comment.replace('<u style="text-decoration: underline;">', '<u>')
                 
-                if "<strong>Exercise:" in comment:
-                    comment = re.sub(r'<strong>Exercise:.+?<br>', '', comment, flags=re.IGNORECASE)
-                elif "Exercise:" in comment:
-                    comment = re.sub(r'Exercise:.+?<br/>', '', comment, flags=re.IGNORECASE)
+                if "Exercise:" in comment:
+                    comment = re.sub(r'(?:<strong>)?Exercise:.*?(?:</strong>)?\s*<br/>\s*(?:</strong>)?', '', comment, flags=re.IGNORECASE)
 
                 if comment.strip() in ["<p>", "<br/>", "</p>", ""]:
                     comment = ""
