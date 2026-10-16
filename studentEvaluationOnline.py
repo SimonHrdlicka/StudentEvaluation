@@ -48,7 +48,6 @@ def create_constrained_pdf(comments_dictionary, output_target, max_height_cm, se
     story = []
     styles = getSampleStyleSheet()
 
-    # Loop directly through selected student names
     for idx, student_name in enumerate(selected_students):
         clean_html = comments_dictionary[student_name]["comment"]
         
@@ -107,8 +106,12 @@ def get_todays_training_comments(api_token):
         "Content-Type": "application/json"
     }
     
-    start_of_period = datetime.combine(datetime.today(), time(00,00,00)).isoformat() + "Z"
-    end_of_period = datetime.combine(datetime.today(), time(23,59,59)).isoformat() + "Z"
+    # Restored timezone-aware UTC dates covering yesterday and today
+    today = datetime.now(timezone.utc).date()
+    yesterday = today - timedelta(days=1)
+    
+    start_of_period = datetime.combine(yesterday, time.min).isoformat() + "Z"
+    end_of_period = datetime.combine(today, time.max).isoformat() + "Z"
 
     query = """
     query GetTodayTrainings($fromDate: DateTime, $toDate: DateTime) {
@@ -172,7 +175,6 @@ def get_todays_training_comments(api_token):
                 name = name + str(sum(1 for n in names if raw_last_name in n))
             names.append(name)
             
-            # --- 1. Comment Parsing ---
             comment = node.get('comment')
             if comment:
                 comment = comment.replace("<p>", "").replace("</p>", "<br>").strip()
@@ -191,7 +193,6 @@ def get_todays_training_comments(api_token):
             else:
                 comment = ""
                 
-            # --- 2. Flight Data Parsing ---
             flights = node.get('flights', [])
             total_landings = 0
             total_flight_time = 0
@@ -200,7 +201,6 @@ def get_todays_training_comments(api_token):
             types = []
             
             for f in flights:
-                # Updated landings parser to loop through the landing objects
                 landings_list = f.get('landings') or []
                 for l in landings_list:
                     total_landings += l.get('landingTypeCount', 0)
@@ -219,10 +219,7 @@ def get_todays_training_comments(api_token):
                 p_log = f.get('primaryLog') or {}
                 s_log = f.get('secondaryLog') or {}
                 
-                # primaryLog is Block Time
                 total_block_time += p_log.get('durationSeconds') or 0
-                
-                # secondaryLog is Flight Time
                 total_flight_time += s_log.get('durationSeconds') or 0
             
             if comment != "":
@@ -244,17 +241,63 @@ def get_todays_training_comments(api_token):
 if __name__ == "__main__":
     st.title("FlightLogger Debriefing Generator")
 
+    # 1. Load Secrets
     api_token = st.secrets.get("FLIGHTLOGGER_TOKEN")
-    if not api_token:
-        st.error("Missing FLIGHTLOGGER_TOKEN in Streamlit Secrets!")
+    app_pin = str(st.secrets.get("APP_PIN")) 
+
+    if not api_token or "APP_PIN" not in st.secrets:
+        st.error("Missing FLIGHTLOGGER_TOKEN or APP_PIN in Streamlit Secrets!")
         st.stop()
 
-    if st.button("Fetch Today's Flights"):
-        with st.spinner("Fetching flight debriefs..."):
-            student_data = get_todays_training_comments(api_token)
-            st.session_state['student_data'] = student_data
+    # 2. Initialize Session State for Authentication
+    if 'authenticated' not in st.session_state:
+        st.session_state['authenticated'] = False
+        st.session_state['auth_time'] = None
+    if 'awaiting_pin' not in st.session_state:
+        st.session_state['awaiting_pin'] = False
 
-    if 'student_data' in st.session_state:
+    # 3. Check if the 2-hour window has expired
+    if st.session_state['authenticated']:
+        time_since_auth = datetime.now() - st.session_state['auth_time']
+        if time_since_auth > timedelta(hours=2):
+            st.session_state['authenticated'] = False
+            st.session_state['auth_time'] = None
+            st.warning("Your session has expired. Please enter the PIN again.")
+
+    # 4. The Main Fetch Button
+    if st.button("Fetch Today's Flights"):
+        if st.session_state['authenticated']:
+            # If already logged in within 2 hours, fetch immediately
+            with st.spinner("Fetching flight debriefs..."):
+                student_data = get_todays_training_comments(api_token)
+                st.session_state['student_data'] = student_data
+        else:
+            # If not logged in, trigger the PIN form
+            st.session_state['awaiting_pin'] = True
+
+    # 5. The PIN Input Form
+    if st.session_state['awaiting_pin']:
+        with st.form("pin_form"):
+            st.info("Authentication required to access FlightLogger data.")
+            entered_pin = st.text_input("Enter App PIN:", type="password")
+            submit_pin = st.form_submit_button("Unlock & Fetch")
+            
+            if submit_pin:
+                if entered_pin == app_pin:
+                    # Mark as authenticated and log the current time
+                    st.session_state['authenticated'] = True
+                    st.session_state['auth_time'] = datetime.now()
+                    st.session_state['awaiting_pin'] = False
+                    
+                    # Fetch the data automatically now that the PIN is correct
+                    with st.spinner("Authenticated! Fetching data..."):
+                        st.session_state['student_data'] = get_todays_training_comments(api_token)
+                    st.rerun() # Refresh the page to hide the PIN form
+                else:
+                    st.error("Incorrect PIN. Please try again.")
+
+    # 6. Display the Results (Only if data exists and we aren't currently waiting for a PIN)
+    if 'student_data' in st.session_state and not st.session_state['awaiting_pin']:
         student_data = st.session_state['student_data']
         
         if not student_data:
@@ -266,11 +309,9 @@ if __name__ == "__main__":
             user_height = st.number_input("Max rectangle height (cm):", min_value=1.0, value=8.0, step=0.5)
             
             if selected_students:
-                # 1. Generate PDF in-memory
                 pdf_buffer = io.BytesIO()
                 create_constrained_pdf(student_data, pdf_buffer, user_height, selected_students)
                 
-                # 2. Download Button
                 st.download_button(
                     label="Download Printable PDF",
                     data=pdf_buffer.getvalue(),
@@ -278,7 +319,6 @@ if __name__ == "__main__":
                     mime="application/pdf"
                 )
                 
-                # 3. Flight Summary Table
                 st.markdown("---")
                 st.subheader("Selected Students Flight Summary")
                 
