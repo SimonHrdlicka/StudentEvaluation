@@ -110,7 +110,7 @@ def get_todays_training_comments(api_token):
     today = datetime.now(timezone.utc).date()
     yesterday = today - timedelta(days=1)
     
-    start_of_period = datetime.combine(yesterday, time.min).isoformat() + "Z"
+    start_of_period = datetime.combine(today, time.min).isoformat() + "Z"
     end_of_period = datetime.combine(today, time.max).isoformat() + "Z"
 
     query = """
