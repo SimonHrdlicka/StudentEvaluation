@@ -186,8 +186,8 @@ def get_todays_training_comments(api_token):
                 comment = comment.replace('<u style="text-decoration: underline;">', '<u>')
                 
                 if "Exercise:" in comment:
-                    comment = re.sub(r'(?:<strong>)?Exercise:.*?(?:</strong>)?\s*<br/>\s*(?:</strong>)?', '', comment, flags=re.IGNORECASE)
-
+                    comment = re.sub(r'(<strong>)?\s*Exercise:.*?(</strong>)?\s*<br/>\s*(</strong>)?',lambda m: '<strong>' if m.group(1) and not m.group(2) and not m.group(3) else '',comment,flags=re.IGNORECASE)
+                    
                 if comment.strip() in ["<p>", "<br/>", "</p>", ""]:
                     comment = ""
             else:
