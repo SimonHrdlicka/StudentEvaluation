@@ -131,6 +131,7 @@ def get_todays_training_comments(api_token):
               }
               landings {
                 landingTypeCount
+                landingType
               }
               primaryLog {
                 durationSeconds
@@ -203,7 +204,8 @@ def get_todays_training_comments(api_token):
             for f in flights:
                 landings_list = f.get('landings') or []
                 for l in landings_list:
-                    total_landings += l.get('landingTypeCount', 0)
+                    if l.get('landingType') == "LANDING" or l.get('APPROACH') == "TOUCH_AND_GO"
+                        total_landings += l.get('landingTypeCount', 0)
                 
                 ac = f.get('aircraft') or {}
                 callsign = ac.get('callSign')
