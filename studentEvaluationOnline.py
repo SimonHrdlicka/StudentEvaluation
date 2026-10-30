@@ -111,7 +111,7 @@ def get_todays_training_comments(api_token):
     yesterday = today - timedelta(days=2)
     
     start_of_period = datetime.combine(today, time.min).isoformat() + "Z"
-    end_of_period = datetime.combine(today, time.max).isoformat() + "Z"
+    end_of_period = datetime.combine(yesterday, time.max).isoformat() + "Z"
 
     query = """
     query GetTodayTrainings($fromDate: DateTime, $toDate: DateTime) {
