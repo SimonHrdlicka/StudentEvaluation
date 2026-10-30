@@ -108,7 +108,7 @@ def get_todays_training_comments(api_token):
     
     # Restored timezone-aware UTC dates covering yesterday and today
     today = datetime.now(timezone.utc).date()
-    yesterday = today - timedelta(days=1)
+    yesterday = today - timedelta(days=2)
     
     start_of_period = datetime.combine(today, time.min).isoformat() + "Z"
     end_of_period = datetime.combine(today, time.max).isoformat() + "Z"
